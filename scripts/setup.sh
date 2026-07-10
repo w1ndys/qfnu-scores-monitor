@@ -3,11 +3,14 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+export UV_CACHE_DIR="${UV_CACHE_DIR:-$ROOT_DIR/.cache/uv}"
 
-if ! command -v uv >/dev/null 2>&1; then
-  echo "错误：未安装 uv，请参考 https://docs.astral.sh/uv/getting-started/installation/"
-  exit 1
-fi
+for command_name in uv npm; do
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "错误：未安装 ${command_name}。"
+    exit 1
+  fi
+done
 
 if [[ ! -f .env ]]; then
   cp .env.example .env
@@ -15,4 +18,5 @@ if [[ ! -f .env ]]; then
 fi
 
 uv sync --frozen
+npm --prefix frontend install
 echo "开发环境部署完成。"

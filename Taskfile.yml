@@ -16,9 +16,14 @@ tasks:
       - ./scripts/setup.sh
 
   start:
-    desc: 启动本地开发服务
+    desc: 同时启动前端和后端开发服务
     cmds:
       - ./scripts/start.sh
+
+  build:
+    desc: 构建前端并检查后端语法
+    cmds:
+      - ./scripts/build.sh
 
   deploy:
     desc: 构建镜像并部署到生产服务器

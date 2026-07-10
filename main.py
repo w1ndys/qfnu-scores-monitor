@@ -1,195 +1,155 @@
-from PIL import Image
-from io import BytesIO
 import datetime
-from dotenv import load_dotenv
-from utils.session_manager import get_session
-from utils.captcha_ocr import get_ocr_res
-from utils.logger import logger
-from config import get_user_config
 import time
 
-load_dotenv()
+from config import get_user_config
+from utils.captcha_ocr import get_ocr_res
+from utils.logger import logger
+from utils.session_manager import get_session
+
+BASE_URL = "http://zhjw.qfnu.edu.cn"
+LOGIN_VERIFY_URL = f"{BASE_URL}/jsxsd/framework/xsMain.jsp"
+USER_AGENT = "Mozilla/5.0"
+LOGIN_STEP_MAX_RETRIES = 3
+MAX_CAPTCHA_RETRIES = 3
+LOGIN_VERIFY_MAX_RETRIES = 2
+REQUEST_TIMEOUT = 30
+PASSWORD_ERRORS = ("密码错误", "用户名或密码错误", "用户名密码错误", "您提供的用户名或者密码有误")
+CAPTCHA_ERRORS = ("验证码错误", "验证码不正确")
 
 
-def handle_captcha():
-    """
-    获取并识别验证码（单次尝试）
-    返回: 识别出的验证码字符串，失败返回 None
-    """
+def _request_with_retry(method: str, url: str, **kwargs):
     session = get_session()
-
-    # 验证码请求URL
-    RandCodeUrl = "http://zhjw.qfnu.edu.cn/jsxsd/verifycode.servlet"
-
-    try:
-        response = session.get(RandCodeUrl, timeout=10)
-
-        if response.status_code != 200:
-            logger.warning(f"请求验证码失败，状态码: {response.status_code}")
-            return None
-
-        # 检查响应是否为图片
-        content_type = response.headers.get("Content-Type", "")
-        if "image" not in content_type:
-            logger.warning(f"验证码响应不是图片，Content-Type: {content_type}")
-            return None
-
-        if len(response.content) < 100:
-            logger.warning(f"验证码响应内容过短，长度: {len(response.content)}")
-            return None
-
+    last_error = None
+    for attempt in range(1, LOGIN_STEP_MAX_RETRIES + 1):
         try:
-            image = Image.open(BytesIO(response.content))
-        except Exception as e:
-            logger.warning(f"验证码图片解析失败: {e}")
-            return None
-
-        result = get_ocr_res(image)
-        if not result:
-            logger.warning("验证码识别失败")
-        return result
-
-    except Exception as e:
-        logger.warning(f"获取验证码异常: {e}")
-        return None
+            response = session.request(method, url, timeout=REQUEST_TIMEOUT, **kwargs)
+            if response.status_code < 400:
+                return response
+            last_error = RuntimeError(f"HTTP {response.status_code}")
+        except Exception as error:
+            last_error = error
+        logger.warning(f"请求 {url} 失败（第 {attempt}/{LOGIN_STEP_MAX_RETRIES} 次）：{last_error}")
+        if attempt < LOGIN_STEP_MAX_RETRIES:
+            time.sleep(1)
+    raise RuntimeError(f"请求 {url} 失败：{last_error}")
 
 
-def generate_encoded_string(user_account, user_password):
-    """
-    生成登录所需的encoded字符串
-    参数:
-        data_str: 初始数据字符串 (实际未使用)
-        user_account: 用户账号
-        user_password: 用户密码
-    返回: encoded字符串 (账号base64 + %%% + 密码base64)
-    """
-    import base64
-
-    # 对账号和密码分别进行base64编码
-    account_b64 = base64.b64encode(user_account.encode()).decode()
-    password_b64 = base64.b64encode(user_password.encode()).decode()
-
-    # 拼接编码后的字符串
-    encoded = f"{account_b64}%%%{password_b64}"
-
-    return encoded
+def initialize_session():
+    _request_with_retry("GET", BASE_URL, headers={"User-Agent": USER_AGENT})
 
 
-def login(random_code, encoded):
-    """
-    执行登录操作
-    返回: 登录响应结果
-    """
-
-    # 登录请求URL
-    loginUrl = "http://zhjw.qfnu.edu.cn/jsxsd/xk/LoginToXkLdap"
-    session = get_session()
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
-        "Origin": "http://zhjw.qfnu.edu.cn",
-        "Referer": "http://zhjw.qfnu.edu.cn/",
-    }
-
-    data = {
-        "userAccount": "",
-        "userPassword": "",
-        "RANDOMCODE": random_code,
-        "encoded": encoded,
-    }
-
-    return session.post(loginUrl, headers=headers, data=data, timeout=1000)
+def handle_captcha() -> str:
+    response = _request_with_retry(
+        "GET",
+        f"{BASE_URL}/verifycode.servlet",
+        headers={"User-Agent": USER_AGENT},
+    )
+    if not response.content:
+        raise RuntimeError("验证码图片为空")
+    return get_ocr_res(response.content)
 
 
-def simulate_login(user_account, user_password):
-    """
-    模拟登录过程
-    返回: 是否登录成功
-    """
-    session = get_session()
-    # 访问教务系统首页，获取必要的cookie
-    response = session.get("http://zhjw.qfnu.edu.cn/jsxsd/")
-    if response.status_code != 200:
-        logger.error("无法访问教务系统首页，请检查网络连接或教务系统的可用性。")
-        return False
+def get_login_tokens() -> tuple[str, str]:
+    response = _request_with_retry(
+        "POST",
+        f"{BASE_URL}/Logon.do?method=logon&flag=sess",
+        headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT},
+        data={},
+    )
+    value = response.text.strip()
+    if not value or value.lower() == "no" or "#" not in value:
+        raise RuntimeError("教务系统未返回有效的 scode/sxh")
+    return tuple(value.split("#", 1))
 
-    # 获取必要的cookie
-    cookies = session.cookies
 
-    for attempt in range(3):
-        random_code = handle_captcha()
-        if not random_code:
-            logger.warning(f"验证码获取失败，重试第 {attempt + 1} 次")
+def generate_encoded_string(user_account: str, user_password: str, scode: str, sxh: str) -> str:
+    code = f"{user_account}%%%{user_password}"
+    result: list[str] = []
+    scode_index = 0
+    for index, character in enumerate(code):
+        result.append(character)
+        if index >= 20:
             continue
+        if index >= len(sxh) or not sxh[index].isdigit():
+            raise RuntimeError("教务系统返回的 sxh 格式无效")
+        length = int(sxh[index])
+        result.append(scode[scode_index:scode_index + length])
+        scode_index += length
+    return "".join(result)
 
-        encoded = generate_encoded_string(user_account, user_password)
-        response = login(random_code, encoded)
-        logger.info(f"登录响应: {response.status_code}")
 
-        if response.status_code == 200:
-            if "验证码错误" in response.text:
-                logger.warning(f"验证码识别错误，重试第 {attempt + 1} 次")
+def submit_login(random_code: str, encoded: str):
+    return get_session().post(
+        f"{BASE_URL}/Logon.do?method=logonLdap",
+        headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT},
+        data={"userAccount": "", "userPassword": "", "RANDOMCODE": random_code, "encoded": encoded},
+        timeout=REQUEST_TIMEOUT,
+        allow_redirects=False,
+    )
+
+
+def verify_login() -> bool:
+    for attempt in range(1, LOGIN_VERIFY_MAX_RETRIES + 1):
+        try:
+            response = get_session().get(
+                LOGIN_VERIFY_URL,
+                headers={"User-Agent": USER_AGENT},
+                timeout=REQUEST_TIMEOUT,
+                allow_redirects=False,
+            )
+            if response.status_code == 200 and (
+                "教学一体化服务平台" in response.text or "glyphicon-class" in response.text
+            ):
+                return True
+        except Exception as error:
+            logger.warning(f"登录状态验证异常：{error}")
+        if attempt < LOGIN_VERIFY_MAX_RETRIES:
+            time.sleep(1)
+    return False
+
+
+def simulate_login(user_account: str, user_password: str) -> bool:
+    initialize_session()
+    for attempt in range(1, MAX_CAPTCHA_RETRIES + 1):
+        try:
+            random_code = handle_captcha()
+            scode, sxh = get_login_tokens()
+            response = submit_login(random_code, generate_encoded_string(user_account, user_password, scode, sxh))
+            body = response.text
+            if any(message in body for message in PASSWORD_ERRORS):
+                raise ValueError("用户名或密码错误")
+            if any(message in body for message in CAPTCHA_ERRORS):
+                logger.warning(f"验证码错误（第 {attempt}/{MAX_CAPTCHA_RETRIES} 次）")
                 continue
-            if "用户登录" in response.text:
-                logger.warning(
-                    f"登录失败（响应包含用户登录页面），重试第 {attempt + 1} 次"
-                )
-                continue
-            if "密码错误" in response.text:
-                raise Exception("用户名或密码错误")
-            return True
-        else:
-            raise Exception("登录失败")
-
-    raise Exception("验证码识别错误，请重试")
+            if not body.strip() or any(marker in body for marker in ("正在登录", "location", "教学一体化服务平台")):
+                if verify_login():
+                    return True
+            else:
+                logger.warning(f"登录响应无法确认成功（第 {attempt}/{MAX_CAPTCHA_RETRIES} 次）")
+        except ValueError:
+            raise
+        except Exception as error:
+            logger.warning(f"登录尝试失败（第 {attempt}/{MAX_CAPTCHA_RETRIES} 次）：{error}")
+        if attempt < MAX_CAPTCHA_RETRIES:
+            time.sleep(1)
+    raise RuntimeError("登录失败，验证码识别或教务系统响应异常")
 
 
 def print_welcome():
     logger.info(f"\n{'*' * 10} 曲阜师范大学模拟登录脚本 {'*' * 10}\n")
-    logger.info("By W1ndys")
-    logger.info("https://github.com/W1ndys")
-    logger.info("\n\n")
     logger.info(f"当前时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 def main():
-    """
-    主函数，协调整个程序的执行流程
-    """
-    # 获取环境变量
     user_account, user_password = get_user_config()
-
-    while True:  # 添加外层循环
+    while True:
         try:
-            # 模拟登录
-            if not simulate_login(user_account, user_password):
-                logger.error("无法建立会话，请检查网络连接或教务系统的可用性。")
-                time.sleep(1)  # 添加重试间隔
-                continue  # 重试登录
-
-            session = get_session()
-            if not session:
-                logger.error("无法建立会话，请检查网络连接或教务系统的可用性。")
-                time.sleep(1)
-                continue
-
-            # 访问主页
-            try:
-                response = session.get(
-                    "http://zhjw.qfnu.edu.cn/jsxsd/framework/xsMain.jsp"
-                )
-                logger.debug(f"页面响应状态码: {response.status_code}")
-                if response.status_code == 200:
-                    logger.info("登录成功!")
-                    break
-            except Exception as e:
-                logger.error(f"访问页面失败: {str(e)}")
-                raise
-
-        except Exception as e:
-            logger.error(f"发生错误: {str(e)}，正在重新登录...")
+            if simulate_login(user_account, user_password):
+                logger.info("登录成功!")
+                break
+        except Exception as error:
+            logger.error(f"登录失败：{error}，正在重试...")
             time.sleep(1)
-            continue  # 重新登录
 
 
 if __name__ == "__main__":

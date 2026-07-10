@@ -2,6 +2,7 @@
 .env
 .env.production
 .venv
+.cache
 __pycache__
 *.py[cod]
 *.log
@@ -9,3 +10,4 @@ monitor.db*
 logs
 data
 dist
+frontend

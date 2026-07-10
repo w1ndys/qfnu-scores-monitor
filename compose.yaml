@@ -1,17 +1,26 @@
 services:
-  app:
-    image: qfnu-scores-monitor:latest
+  backend:
+    image: qfnu-scores-monitor-backend:latest
     build:
       context: .
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       FLASK_HOST: 0.0.0.0
       FLASK_PORT: 5000
-    ports:
-      - "${APP_PORT:-5000}:5000"
     volumes:
       - ./data:/app/data
     working_dir: /app/data
     command: ["uv", "run", "--no-sync", "python", "/app/app.py"]
+
+  frontend:
+    image: qfnu-scores-monitor-frontend:latest
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${APP_PORT:-5000}:80"
