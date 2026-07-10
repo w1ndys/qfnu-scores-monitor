@@ -1,0 +1,17 @@
+services:
+  app:
+    image: qfnu-scores-monitor:latest
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      FLASK_HOST: 0.0.0.0
+      FLASK_PORT: 5000
+    ports:
+      - "${APP_PORT:-5000}:5000"
+    volumes:
+      - ./data:/app/data
+    working_dir: /app/data
+    command: ["uv", "run", "--no-sync", "python", "/app/app.py"]

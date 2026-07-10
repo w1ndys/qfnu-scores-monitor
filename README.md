@@ -25,6 +25,30 @@
 
 ## 快速开始
 
+项目使用 [Task](https://taskfile.dev/) 统一执行开发和运维命令，Shell 实现位于 `scripts/` 目录。
+
+```bash
+# 初始化开发环境（创建 .env 并同步依赖）
+task setup
+
+# 启动开发服务
+task start
+```
+
+### 生产部署
+
+默认使用 Docker Compose 部署到 `w1ndys@thinkpad:/opt/qfnu-scores-monitor`。部署会在本地拉取并构建镜像、打包镜像和运维配置，上传后在远端加载镜像、启动服务并清理悬空镜像。
+
+```bash
+# 使用默认目标
+task deploy
+
+# 通过 CLI 变量指定目标服务器
+task deploy HOST=1.2.3.4 PORT=22 USER=root DIR=/srv/app
+```
+
+部署时优先使用 `.env.production`，其次使用 `.env`；两者均不存在时使用 `.env.example`。远端需安装 Docker 及 Docker Compose 插件，SSH 用户需有 Docker 权限或免交互 `sudo` 权限。
+
 ### 1. 安装依赖
 
 ```bash

@@ -1,0 +1,26 @@
+version: '3'
+
+silent: true
+
+vars:
+  PROJECT_NAME: '{{base .ROOT_DIR}}'
+  HOST: thinkpad
+  PORT: '22'
+  USER: w1ndys
+  DIR: '/opt/{{.PROJECT_NAME}}'
+
+tasks:
+  setup:
+    desc: 初始化本地开发环境
+    cmds:
+      - ./scripts/setup.sh
+
+  start:
+    desc: 启动本地开发服务
+    cmds:
+      - ./scripts/start.sh
+
+  deploy:
+    desc: 构建镜像并部署到生产服务器
+    cmds:
+      - ./scripts/deploy.sh '{{.HOST}}' '{{.PORT}}' '{{.USER}}' '{{.DIR}}'
