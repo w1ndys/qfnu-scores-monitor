@@ -4,6 +4,7 @@ from utils.score_monitor import restore_session, fetch_scores, compare_scores, s
 from utils.dingtalk import notify_new_scores, notify_session_expired
 from utils.crypto import encrypt_session, decrypt_session
 from utils.logger import logger
+from utils.settings_store import SettingsStore
 scheduler = BackgroundScheduler()
 
 MAX_LOGIN_ATTEMPTS = 3  # 验证码识别最大尝试次数
@@ -178,9 +179,23 @@ def check_all_users():
 
 def start_scheduler():
     """启动定时任务"""
-    scheduler.add_job(check_all_users, "interval", minutes=5, id="check_scores")
+    interval = SettingsStore.get()["check_interval_minutes"]
+    scheduler.add_job(
+        check_all_users,
+        "interval",
+        minutes=interval,
+        id="check_scores",
+        replace_existing=True,
+    )
     scheduler.start()
-    logger.info("定时任务已启动，每5分钟检查一次")
+    logger.info(f"定时任务已启动，每{interval}分钟检查一次")
+
+
+def update_check_interval(minutes: int):
+    """立即更新成绩监控任务的执行间隔。"""
+    if scheduler.running:
+        scheduler.reschedule_job("check_scores", trigger="interval", minutes=minutes)
+        logger.info(f"定时任务间隔已更新为每{minutes}分钟检查一次")
 
 
 def stop_scheduler():

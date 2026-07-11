@@ -25,7 +25,9 @@
 
 项目采用前后端分离架构。Vue 前端通过 `/api` 调用 Flask REST API；后端按 `API → Service → Repository` 分层。生产环境由 Nginx 提供前端静态资源并反向代理后端接口。
 
-登录采用教务系统 SSO 多步流程：初始化 Cookie、获取验证码、获取 `scode/sxh`、生成加密凭证、提交登录，并通过 `/jsxsd/framework/xsMain.jsp` 验证会话。验证码通过外部 OCR 服务识别，可在页面右上角“OCR 配置”中维护服务地址；服务需提供 `POST {OCR_URL}/ocr` 接口。
+登录采用教务系统 SSO 多步流程：初始化 Cookie、获取验证码、获取 `scode/sxh`、生成加密凭证、提交登录、手动跟随 `LoginToXk` 票据跳转，并通过 `/jsxsd/framework/xsMain.jsp` 验证会话。验证码通过外部 OCR 服务识别，可在页面右上角“系统配置”中维护服务地址；服务需提供 `POST {OCR_URL}/ocr` 接口。
+
+成绩监控间隔可在页面右上角“系统配置”中调整，范围为 1 至 1440 分钟，保存后立即重新调度并持久化，无需重启服务。
 
 ## 快速开始
 

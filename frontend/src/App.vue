@@ -77,7 +77,7 @@ onMounted(loadUsers)
         <el-button :icon="Refresh" :loading="loading" @click="loadUsers">刷新</el-button>
         <el-button type="warning" :icon="Search" :loading="checking" @click="checkAll">全部检测</el-button>
         <el-button :icon="Document" @click="logVisible = true">运行日志</el-button>
-        <el-button :icon="Setting" @click="settingsVisible = true">OCR 配置</el-button>
+        <el-button :icon="Setting" @click="settingsVisible = true">系统配置</el-button>
       </div>
     </div>
   </header>

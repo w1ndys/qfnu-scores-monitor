@@ -8,7 +8,10 @@ class SettingsStore:
 
     @classmethod
     def get(cls) -> dict:
-        settings = {"ocr_url": os.getenv("OCR_URL", "")}
+        settings = {
+            "ocr_url": os.getenv("OCR_URL", ""),
+            "check_interval_minutes": int(os.getenv("CHECK_INTERVAL_MINUTES", "5")),
+        }
         if cls.PATH.exists():
             settings.update(json.loads(cls.PATH.read_text(encoding="utf-8")))
         return settings

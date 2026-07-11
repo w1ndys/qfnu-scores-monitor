@@ -26,5 +26,6 @@ dl { color: #78716c; font-size: 13px; }dl div { display: flex; justify-content: 
 .compact { border-top: 1px solid #f0ece8; padding-top: 13px; flex-wrap: wrap; }
 .log-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }.log-content { min-height: 360px; max-height: 60vh; overflow: auto; padding: 16px; border-radius: 10px; background: #1c1917; color: #e7e5e4; font: 12px/1.65 ui-monospace, monospace; white-space: pre-wrap; }
 .form-help { margin-top: 8px; color: #78716c; font-size: 12px; line-height: 1.6; }
+.setting-unit { margin-left: 10px; color: #57534e; }.full-line { width: 100%; }
 @media (max-width: 950px) { .stat-grid { grid-template-columns: repeat(3, 1fr); }.workspace { grid-template-columns: 1fr; }.header-inner { align-items: start; flex-direction: column; } }
 @media (max-width: 600px) { .header-inner, main { width: min(100% - 24px, 1400px); }.app-header { padding-inline: 12px; }.stat-grid { grid-template-columns: repeat(2, 1fr); }.header-actions .el-button { flex: 1; }.header-actions { width: 100%; }.user-grid { grid-template-columns: 1fr; } }
