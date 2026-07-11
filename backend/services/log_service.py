@@ -1,26 +1,37 @@
-import re
-from pathlib import Path
+import sqlite3
+
+from utils.logger import LOG_DB_PATH
 
 
 class LogService:
-    LOG_NAME = re.compile(r"^app_\d{8}_\d{6}\.log$")
-
-    @classmethod
-    def list_logs(cls) -> list[dict]:
-        files = sorted(Path("logs").glob("*.log"), key=lambda path: path.stat().st_mtime, reverse=True)
-        return [
-            {"name": path.name, "size": path.stat().st_size, "mtime": int(path.stat().st_mtime)}
-            for path in files
-            if cls.LOG_NAME.fullmatch(path.name)
-        ]
-
-    @classmethod
-    def read_log(cls, name: str, lines: int) -> dict:
-        if not cls.LOG_NAME.fullmatch(name):
-            return {"success": False, "message": "无效的日志文件名"}
-        path = Path("logs") / name
-        if not path.exists():
-            return {"success": False, "message": "日志文件不存在"}
+    @staticmethod
+    def read_logs(lines: int) -> dict:
         limit = max(1, min(lines, 1000))
-        content = path.read_text(encoding="utf-8").splitlines(keepends=True)[-limit:]
-        return {"success": True, "content": "".join(content), "total_lines": len(content)}
+        try:
+            with sqlite3.connect(LOG_DB_PATH, timeout=5) as connection:
+                connection.row_factory = sqlite3.Row
+                rows = connection.execute(
+                    """
+                    SELECT created_at, level, module, function, line, message, exception
+                    FROM logs
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                ).fetchall()
+        except sqlite3.Error as error:
+            return {"success": False, "message": f"读取日志数据库失败：{error}"}
+
+        entries = [dict(row) for row in reversed(rows)]
+        content = "\n".join(
+            f"{entry['created_at']} | {entry['level']:<8} | "
+            f"{entry['module']}:{entry['function']}:{entry['line']} - "
+            f"{entry['message']}{(' | ' + entry['exception']) if entry['exception'] else ''}"
+            for entry in entries
+        )
+        return {
+            "success": True,
+            "content": content,
+            "total_lines": len(entries),
+            "logs": entries,
+        }

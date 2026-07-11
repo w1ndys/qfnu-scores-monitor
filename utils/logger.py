@@ -1,54 +1,88 @@
-import os
+import sqlite3
 import sys
-import datetime
+import threading
+from pathlib import Path
+
 from loguru import logger as _loguru_logger
 
-# 标志：确保只初始化一次
+LOG_DB_PATH = Path("logs.db")
+_write_lock = threading.Lock()
 _initialized = False
 
 
-def _setup_logger():
-    """
-    配置日志系统 (使用 loguru)
-    内部函数，模块加载时自动调用一次
-    """
+def _initialize_database() -> None:
+    with sqlite3.connect(LOG_DB_PATH, timeout=5) as connection:
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("PRAGMA busy_timeout=5000")
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                timestamp REAL NOT NULL,
+                level TEXT NOT NULL,
+                module TEXT NOT NULL,
+                function TEXT NOT NULL,
+                line INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                exception TEXT
+            )
+            """
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp DESC)"
+        )
+
+
+def _database_sink(message) -> None:
+    record = message.record
+    exception = str(record["exception"]) if record["exception"] else None
+    try:
+        with _write_lock, sqlite3.connect(LOG_DB_PATH, timeout=5) as connection:
+            connection.execute("PRAGMA busy_timeout=5000")
+            connection.execute(
+                """
+                INSERT INTO logs (
+                    created_at, timestamp, level, module, function, line, message, exception
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record["time"].strftime("%Y-%m-%d %H:%M:%S"),
+                    record["time"].timestamp(),
+                    record["level"].name,
+                    record["name"],
+                    record["function"],
+                    record["line"],
+                    record["message"],
+                    exception,
+                ),
+            )
+    except sqlite3.Error as error:
+        print(f"日志写入数据库失败：{error}", file=sys.stderr)
+
+
+def _setup_logger() -> None:
     global _initialized
     if _initialized:
         return
 
-    # 确保logs目录存在
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
+    try:
+        _initialize_database()
+    except sqlite3.Error as error:
+        print(f"日志数据库初始化失败：{error}", file=sys.stderr)
 
-    # 移除默认的 handler
     _loguru_logger.remove()
-
-    # 定义日志格式
-    log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-
-    # 添加控制台 handler
+    log_format = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+        "<level>{message}</level>"
+    )
     _loguru_logger.add(sys.stderr, format=log_format, level="INFO", colorize=True)
-
-    # 添加文件 handler
-    log_file_path = os.path.join(
-        "logs", f'app_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
-    )
-    _loguru_logger.add(
-        log_file_path,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-        level="DEBUG",
-        rotation="10 MB",
-        retention="1 week",
-        encoding="utf-8",
-    )
-
+    _loguru_logger.add(_database_sink, level="DEBUG", catch=True)
     _initialized = True
 
 
-# 模块加载时自动初始化
 _setup_logger()
-
-# 导出配置好的 logger 供其他模块使用
 logger = _loguru_logger
 
-__all__ = ["logger"]
+__all__ = ["LOG_DB_PATH", "logger"]

@@ -41,12 +41,7 @@ def check_all():
 
 @api.get("/logs")
 def logs():
-    return jsonify({"success": True, "logs": LogService.list_logs()})
-
-
-@api.get("/logs/<log_name>")
-def log_content(log_name: str):
-    return jsonify(LogService.read_log(log_name, request.args.get("lines", 200, type=int)))
+    return jsonify(LogService.read_logs(request.args.get("lines", 200, type=int)))
 
 
 @api.get("/settings")

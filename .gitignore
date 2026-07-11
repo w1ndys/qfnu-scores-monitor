@@ -175,6 +175,9 @@ cython_debug/
 .serena
 # Project specific
 monitor.db
+logs.db
+logs.db-shm
+logs.db-wal
 logs/
 data/
 frontend/node_modules/
