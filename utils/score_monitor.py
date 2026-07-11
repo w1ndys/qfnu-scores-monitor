@@ -12,7 +12,23 @@ def restore_session(encrypted_session, encryption_key):
     session_dict = json.loads(session_data)
 
     session = requests.Session()
-    session.cookies.update(session_dict['cookies'])
+    cookies = session_dict['cookies']
+    if isinstance(cookies, dict):
+        # 兼容旧版本保存的 {name: value} 格式。
+        session.cookies.update(cookies)
+    else:
+        for cookie in cookies:
+            session.cookies.set_cookie(
+                requests.cookies.create_cookie(
+                    name=cookie['name'],
+                    value=cookie['value'],
+                    domain=cookie.get('domain', ''),
+                    path=cookie.get('path', '/'),
+                    secure=cookie.get('secure', False),
+                    expires=cookie.get('expires'),
+                    rest=cookie.get('rest', {}),
+                )
+            )
     session.headers.update(session_dict['headers'])
     return session
 
@@ -20,7 +36,18 @@ def restore_session(encrypted_session, encryption_key):
 def serialize_session(session):
     """序列化session为JSON"""
     return json.dumps({
-        'cookies': dict(session.cookies),
+        'cookies': [
+            {
+                'name': cookie.name,
+                'value': cookie.value,
+                'domain': cookie.domain,
+                'path': cookie.path,
+                'secure': cookie.secure,
+                'expires': cookie.expires,
+                'rest': cookie._rest,
+            }
+            for cookie in session.cookies
+        ],
         'headers': dict(session.headers)
     })
 

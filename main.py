@@ -1,5 +1,6 @@
 import datetime
 import time
+from urllib.parse import urljoin, urlparse
 
 from config import get_user_config
 from utils.captcha_ocr import get_ocr_res
@@ -88,6 +89,26 @@ def submit_login(random_code: str, encoded: str):
     )
 
 
+def follow_login_redirect(response) -> bool:
+    """手动跟随登录票据跳转，完成教务系统 Cookie 会话建立。"""
+    if not response.is_redirect:
+        return False
+    location = response.headers.get("Location")
+    if not location:
+        return False
+    redirect_url = urljoin(BASE_URL, location)
+    if urlparse(redirect_url).hostname != urlparse(BASE_URL).hostname:
+        raise RuntimeError("教务系统返回了不安全的跨域登录跳转")
+    redirect_response = get_session().get(
+        redirect_url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=REQUEST_TIMEOUT,
+        allow_redirects=True,
+    )
+    redirect_response.raise_for_status()
+    return True
+
+
 def verify_login() -> bool:
     for attempt in range(1, LOGIN_VERIFY_MAX_RETRIES + 1):
         try:
@@ -121,9 +142,12 @@ def simulate_login(user_account: str, user_password: str) -> bool:
             if any(message in body for message in CAPTCHA_ERRORS):
                 logger.warning(f"验证码错误（第 {attempt}/{MAX_CAPTCHA_RETRIES} 次）")
                 continue
+            followed_redirect = follow_login_redirect(response)
             if not body.strip() or any(marker in body for marker in ("正在登录", "location", "教学一体化服务平台")):
                 if verify_login():
                     return True
+            elif followed_redirect and verify_login():
+                return True
             else:
                 logger.warning(f"登录响应无法确认成功（第 {attempt}/{MAX_CAPTCHA_RETRIES} 次）")
         except ValueError:

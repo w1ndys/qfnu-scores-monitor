@@ -25,6 +25,13 @@ tasks:
     cmds:
       - ./scripts/build.sh
 
+  login:test:
+    desc: 使用本地 ddddocr 验证教务系统登录流程
+    requires:
+      vars: [ACCOUNT]
+    cmds:
+      - ./scripts/test-login.sh '{{.ACCOUNT}}'
+
   deploy:
     desc: 构建镜像并部署到生产服务器
     cmds:
