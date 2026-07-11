@@ -24,8 +24,11 @@ main { margin-top: -38px; padding-bottom: 40px; }
 .user-heading strong { font-family: ui-monospace, monospace; font-size: 17px; }.tags { display: flex; gap: 5px; }
 dl { color: #78716c; font-size: 13px; }dl div { display: flex; justify-content: space-between; gap: 12px; margin: 7px 0; }dt, dd { margin: 0; }dd { color: #44403c; text-align: right; }
 .compact { border-top: 1px solid #f0ece8; padding-top: 13px; flex-wrap: wrap; }
-.log-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }.log-content { min-height: 360px; max-height: 60vh; overflow: auto; padding: 16px; border-radius: 10px; background: #1c1917; color: #e7e5e4; font: 12px/1.65 ui-monospace, monospace; white-space: pre-wrap; }
+.log-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.log-search { width: min(320px, 100%); }.log-level-select { width: 130px; }.log-count { margin-left: auto; color: #78716c; font-size: 13px; }
+.log-source { color: #57534e; font: 12px/1.5 ui-monospace, monospace; }.log-message { line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.log-exception { margin-top: 7px; color: #b91c1c; }.log-exception summary { cursor: pointer; font-size: 12px; }.log-exception pre { overflow: auto; margin: 7px 0 0; padding: 10px; border-radius: 7px; background: #292524; color: #fecaca; font: 12px/1.55 ui-monospace, monospace; white-space: pre-wrap; }
 .form-help { margin-top: 8px; color: #78716c; font-size: 12px; line-height: 1.6; }
 .setting-unit { margin-left: 10px; color: #57534e; }.full-line { width: 100%; }
 @media (max-width: 950px) { .stat-grid { grid-template-columns: repeat(3, 1fr); }.workspace { grid-template-columns: 1fr; }.header-inner { align-items: start; flex-direction: column; } }
-@media (max-width: 600px) { .header-inner, main { width: min(100% - 24px, 1400px); }.app-header { padding-inline: 12px; }.stat-grid { grid-template-columns: repeat(2, 1fr); }.header-actions .el-button { flex: 1; }.header-actions { width: 100%; }.user-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .header-inner, main { width: min(100% - 24px, 1400px); }.app-header { padding-inline: 12px; }.stat-grid { grid-template-columns: repeat(2, 1fr); }.header-actions .el-button { flex: 1; }.header-actions { width: 100%; }.user-grid { grid-template-columns: 1fr; }.log-search { width: 100%; }.log-count { width: 100%; margin-left: 0; } }
