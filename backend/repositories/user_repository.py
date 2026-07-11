@@ -1,4 +1,4 @@
-from models import DatabaseManager, get_timestamp
+from backend.database import DatabaseManager, get_timestamp
 
 
 class UserRepository:

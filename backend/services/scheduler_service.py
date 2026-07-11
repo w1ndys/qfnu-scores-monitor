@@ -1,10 +1,10 @@
 from apscheduler.schedulers.background import BackgroundScheduler
-from models import DatabaseManager, get_timestamp
-from utils.score_monitor import restore_session, fetch_scores, compare_scores, serialize_session
-from utils.dingtalk import notify_new_scores, notify_session_expired
-from utils.crypto import encrypt_session, decrypt_session
-from utils.logger import logger
-from utils.settings_store import SettingsStore
+from backend.database import DatabaseManager, get_timestamp
+from backend.utils.score_monitor import restore_session, fetch_scores, compare_scores, serialize_session
+from backend.utils.dingtalk import notify_new_scores, notify_session_expired
+from backend.utils.crypto import encrypt_session, decrypt_session
+from backend.utils.logger import logger
+from backend.utils.settings_store import SettingsStore
 scheduler = BackgroundScheduler()
 
 MAX_LOGIN_ATTEMPTS = 3  # 验证码识别最大尝试次数
@@ -12,8 +12,8 @@ MAX_LOGIN_ATTEMPTS = 3  # 验证码识别最大尝试次数
 
 def try_relogin(user_account, encrypted_password, encryption_key):
     """尝试重新登录，最多尝试3次"""
-    from main import simulate_login
-    from utils.session_manager import get_session, reset_session
+    from backend.services.login_service import simulate_login
+    from backend.utils.session_manager import get_session, reset_session
 
     try:
         # 解密密码
@@ -54,7 +54,9 @@ def handle_expired_session(cursor, user, dingtalk_webhook, dingtalk_secret):
             "UPDATE users SET session_expired = 1 WHERE user_account = ?",
             (user_account,),
         )
-        notify_session_expired(dingtalk_webhook, dingtalk_secret, user_account)
+        notify_session_expired(
+            dingtalk_webhook, dingtalk_secret, user_account, cursor.connection
+        )
         return False
 
     # 尝试重新登录
@@ -74,7 +76,9 @@ def handle_expired_session(cursor, user, dingtalk_webhook, dingtalk_secret):
             "UPDATE users SET session_expired = 1 WHERE user_account = ?",
             (user_account,),
         )
-        notify_session_expired(dingtalk_webhook, dingtalk_secret, user_account)
+        notify_session_expired(
+            dingtalk_webhook, dingtalk_secret, user_account, cursor.connection
+        )
         return False
 
 
@@ -117,7 +121,13 @@ def check_single_user(user_account):
 
                 if new_courses:
                     logger.info(f"用户 {user_account} 发现新成绩: {len(new_courses)}门")
-                    notify_new_scores(user["dingtalk_webhook"], user["dingtalk_secret"], new_courses, user_account)
+                    notify_new_scores(
+                        user["dingtalk_webhook"],
+                        user["dingtalk_secret"],
+                        new_courses,
+                        user_account,
+                        conn,
+                    )
                     return {"success": True, "message": f"发现 {len(new_courses)} 门新成绩，已发送通知", "status": "new_scores", "count": len(new_courses)}
                 else:
                     logger.info(f"用户 {user_account} 无新成绩")
@@ -167,7 +177,13 @@ def check_all_users():
 
                     if new_courses:
                         logger.info(f"用户 {user_account} 发现新成绩: {len(new_courses)}门")
-                        notify_new_scores(dingtalk_webhook, dingtalk_secret, new_courses, user_account)
+                        notify_new_scores(
+                            dingtalk_webhook,
+                            dingtalk_secret,
+                            new_courses,
+                            user_account,
+                            conn,
+                        )
                     else:
                         logger.info(f"用户 {user_account} 无新成绩")
 

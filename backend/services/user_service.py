@@ -1,11 +1,11 @@
 from backend.repositories import UserRepository
-from main import simulate_login
-from scheduler import check_all_users, check_single_user
-from utils.crypto import encrypt_session, generate_key
-from utils.dingtalk import notify_init_scores
-from utils.logger import logger
-from utils.score_monitor import fetch_scores, serialize_session
-from utils.session_manager import get_session, reset_session
+from backend.services.login_service import simulate_login
+from backend.services.scheduler_service import check_all_users, check_single_user
+from backend.utils.crypto import encrypt_session, generate_key
+from backend.utils.dingtalk import notify_init_scores
+from backend.utils.logger import logger
+from backend.utils.score_monitor import fetch_scores, serialize_session
+from backend.utils.session_manager import get_session, reset_session
 
 
 class UserService:

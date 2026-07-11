@@ -1,6 +1,8 @@
+"""后端环境变量配置。"""
+
 import os
 import sys
-from utils.logger import logger
+from backend.utils.logger import logger
 
 
 def get_user_config():

@@ -1,3 +1,5 @@
+"""后端 SQLite 数据库连接与结构管理。"""
+
 import sqlite3
 import os
 import time

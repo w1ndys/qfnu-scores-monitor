@@ -1,3 +1,5 @@
+"""后端敏感数据加解密工具。"""
+
 import os
 import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM

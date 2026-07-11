@@ -118,22 +118,16 @@ python app.py
 ├── backend/
 │   ├── api/                # HTTP API 路由层
 │   ├── services/           # 业务服务层
-│   └── repositories/       # 数据访问层
+│   │   ├── login_service.py     # 教务系统登录服务
+│   │   └── scheduler_service.py # 定时任务调度服务
+│   ├── repositories/       # 数据访问层
+│   ├── utils/              # 加密、监控、通知及日志工具
+│   ├── config.py           # 后端环境配置
+│   └── database.py         # 数据库连接与结构管理
 ├── frontend/
 │   ├── src/api/            # 前端 API 客户端
 │   ├── src/components/     # Vue 页面组件
 │   └── src/App.vue         # 前端应用入口
-├── scheduler.py            # 定时任务调度器
-├── models.py               # 数据库模型
-├── main.py                 # 登录模块
-├── config.py               # 配置文件
-├── utils/
-│   ├── crypto.py          # 加密工具
-│   ├── score_monitor.py   # 成绩监控
-│   ├── dingtalk.py        # 钉钉推送
-│   ├── session_manager.py # Session 管理
-│   ├── captcha_ocr.py     # 验证码识别
-│   └── logger.py          # 日志工具
 ├── compose.yaml            # 前后端生产编排
 └── Taskfile.yml            # 开发运维任务入口
 ```

@@ -1,4 +1,4 @@
-from utils.settings_store import SettingsStore
+from backend.utils.settings_store import SettingsStore
 
 
 class SettingsRepository(SettingsStore):

@@ -24,7 +24,7 @@ class SettingsService:
         settings = {"ocr_url": ocr_url, "check_interval_minutes": interval}
         SettingsRepository.save(settings)
 
-        from scheduler import update_check_interval
+        from backend.services.scheduler_service import update_check_interval
 
         update_check_interval(interval)
         return {"success": True, "message": "系统配置已保存并生效", "settings": settings}

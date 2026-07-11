@@ -1,3 +1,5 @@
+"""系统配置的文件持久化工具。"""
+
 import json
 import os
 from pathlib import Path

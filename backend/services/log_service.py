@@ -1,6 +1,6 @@
 import sqlite3
 
-from utils.logger import LOG_DB_PATH
+from backend.utils.logger import LOG_DB_PATH
 
 
 class LogService:

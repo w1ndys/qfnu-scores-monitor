@@ -2,7 +2,7 @@ import base64
 
 import requests
 
-from utils.settings_store import SettingsStore
+from backend.utils.settings_store import SettingsStore
 
 
 def get_ocr_res(image_bytes: bytes) -> str:

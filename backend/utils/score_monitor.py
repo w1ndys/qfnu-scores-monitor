@@ -2,8 +2,8 @@ import json
 import hashlib
 import requests
 from bs4 import BeautifulSoup
-from utils.crypto import decrypt_session
-from models import DatabaseManager
+from backend.utils.crypto import decrypt_session
+from backend.database import DatabaseManager
 
 
 def restore_session(encrypted_session, encryption_key):

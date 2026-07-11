@@ -1,3 +1,5 @@
+"""教务系统 HTTP 会话生命周期管理。"""
+
 from requests import Session
 import threading
 

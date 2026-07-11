@@ -4,8 +4,8 @@ import os
 from flask import Flask, jsonify
 
 from backend.api import api
-from models import init_db
-from scheduler import start_scheduler, stop_scheduler
+from backend.database import init_db
+from backend.services.scheduler_service import start_scheduler, stop_scheduler
 
 
 def create_app(testing: bool = False) -> Flask:

@@ -2,10 +2,10 @@ import datetime
 import time
 from urllib.parse import urljoin, urlparse
 
-from config import get_user_config
-from utils.captcha_ocr import get_ocr_res
-from utils.logger import logger
-from utils.session_manager import get_session
+from backend.config import get_user_config
+from backend.utils.captcha_ocr import get_ocr_res
+from backend.utils.logger import logger
+from backend.utils.session_manager import get_session
 
 BASE_URL = "http://zhjw.qfnu.edu.cn"
 LOGIN_VERIFY_URL = f"{BASE_URL}/jsxsd/framework/xsMain.jsp"
